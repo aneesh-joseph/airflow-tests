@@ -114,11 +114,11 @@ RUN KEY="A4A9406876FCBD3C456770C88C718D3B5072E1F5" \
     && apt-get autoremove -yqq --purge \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-curl https://packages.microsoft.com/config/debian/9/prod.list > /etc/apt/sources.list.d/mssql-release.list
-RUN export ACCEPT_EULA=Y \
-     && apt-get update -yqq \
-     && apt-get upgrade -yqq \
-     && apt-get -yqq install -y --allow-unauthenticated msodbcsql17 mssql-tools
+RUN curl https://packages.microsoft.com/config/debian/9/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && export ACCEPT_EULA=Y \
+    && apt-get update -yqq \
+    && apt-get upgrade -yqq \
+    && apt-get -yqq install -y --allow-unauthenticated msodbcsql17 mssql-tools
 
 RUN adduser airflow \
     && echo "airflow ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/airflow \
