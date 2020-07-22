@@ -269,7 +269,7 @@ function get_environment_for_builds_on_ci() {
             if [[ ${GITHUB_EVENT_NAME:=} == "pull_request" ]]; then
                 export CI_EVENT_TYPE="pull_request"
                 # default name of the source repo (assuming it's forked without rename)
-                export SOURCE_AIRFLOW_REPO=${SOURCE_AIRFLOW_REPO:="airflow"}
+                export SOURCE_AIRFLOW_REPO=${SOURCE_AIRFLOW_REPO:="airflow-tests"}
                 # For Pull Requests it's ambiguous to find the PR and we need to
                 # assume that name of repo is airflow but it could be overridden in case it's not
                 export CI_SOURCE_REPO="${GITHUB_ACTOR}/${SOURCE_AIRFLOW_REPO}"
