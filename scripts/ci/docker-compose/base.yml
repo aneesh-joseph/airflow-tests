@@ -19,6 +19,7 @@ version: "2.2"
 services:
   airflow:
     image: ${AIRFLOW_IMAGE}
+    tty: true
     environment:
       - USER=root
       - ADDITIONAL_PATH=~/.local/bin

@@ -47,6 +47,7 @@ from airflow.utils.state import State
 from airflow.utils.weight_rule import WeightRule
 from tests.models import DEFAULT_DATE
 from tests.test_utils.db import clear_db_dags
+from sqlalchemy.sql import expression
 
 
 class DagTest(unittest.TestCase):
@@ -765,7 +766,7 @@ class DagTest(unittest.TestCase):
         ).filter(
             DagModel.dag_id.in_([subdag_id, dag_id]),
         ).filter(
-            DagModel.is_paused.is_(False)
+            DagModel.is_paused == expression.false()
         ).count()
 
         self.assertEqual(2, unpaused_dags)
@@ -777,7 +778,7 @@ class DagTest(unittest.TestCase):
         ).filter(
             DagModel.dag_id.in_([subdag_id, dag_id]),
         ).filter(
-            DagModel.is_paused.is_(True)
+            DagModel.is_paused == expression.true()
         ).count()
 
         self.assertEqual(2, paused_dags)
