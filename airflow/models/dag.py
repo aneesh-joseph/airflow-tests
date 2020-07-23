@@ -40,6 +40,7 @@ from dateutil.relativedelta import relativedelta
 from future.standard_library import install_aliases
 from sqlalchemy import Boolean, Column, ForeignKey, Index, Integer, String, Text, func, or_
 from sqlalchemy.orm import backref, relationship
+from sqlalchemy.sql import expression
 
 from airflow import settings, utils
 from airflow.configuration import conf
@@ -1804,7 +1805,7 @@ class DagModel(Base):
         """
         paused_dag_ids = (
             session.query(DagModel.dag_id)
-            .filter(DagModel.is_paused.is_(True))
+            .filter(DagModel.is_paused == expression.true())
             .filter(DagModel.dag_id.in_(dag_ids))
             .all()
         )

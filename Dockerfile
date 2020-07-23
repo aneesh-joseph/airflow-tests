@@ -320,6 +320,16 @@ RUN KEY="A4A9406876FCBD3C456770C88C718D3B5072E1F5" \
     && apt-get autoremove -yqq --purge \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+#Install MS SQL Drivers
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/9/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && ACCEPT_EULA=Y \
+    && apt-get update -yqq \
+    && apt-get upgrade -yqq \
+    && apt-get -yqq install -y --no-install-recommends \
+           msodbcsql17 \
+           mssql-tools
+
 ARG PIP_VERSION
 ENV PIP_VERSION=${PIP_VERSION}
 RUN pip install --upgrade pip==${PIP_VERSION}
