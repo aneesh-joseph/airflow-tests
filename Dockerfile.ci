@@ -157,6 +157,9 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && apt-get update -yqq \
     && apt-get upgrade -yqq \
     && ACCEPT_EULA=Y apt-get -yqq install -y --no-install-recommends \
+      gcc \
+      unixodbc-dev  \
+      g++ \
       msodbcsql17 \
       mssql-tools \
     && rm -rf /var/lib/apt/lists/*
