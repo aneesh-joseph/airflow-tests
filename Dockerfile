@@ -323,10 +323,9 @@ RUN KEY="A4A9406876FCBD3C456770C88C718D3B5072E1F5" \
 #Install MS SQL Drivers
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/9/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && ACCEPT_EULA=Y \
     && apt-get update -yqq \
     && apt-get upgrade -yqq \
-    && apt-get -yqq install -y --no-install-recommends \
+    && ACCEPT_EULA=Y apt-get -yqq install -y --no-install-recommends \
            msodbcsql17 \
            mssql-tools
 
