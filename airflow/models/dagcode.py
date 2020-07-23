@@ -19,7 +19,7 @@ import os
 import struct
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Column, String, UnicodeText, and_, exists
+from sqlalchemy import BigInteger, Column, String, UnicodeText, and_
 
 from airflow.exceptions import AirflowException, DagCodeNotFound
 from airflow.models import Base
@@ -160,8 +160,8 @@ class DagCode(Base):
         :param session: ORM Session
         """
         fileloc_hash = cls.dag_fileloc_hash(fileloc)
-        return session.query(exists().where(cls.fileloc_hash == fileloc_hash))\
-            .scalar()
+        return session.query(cls).filter(cls.fileloc_hash == fileloc_hash)\
+            .first() is not None
 
     @classmethod
     def get_code_by_fileloc(cls, fileloc):
