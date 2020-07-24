@@ -177,7 +177,7 @@ class SerializedDagModel(Base):
         :param session: ORM Session
         :rtype: bool
         """
-        return session.query(where(cls.dag_id == dag_id)).first() is not None
+        return session.query(cls).filter(cls.dag_id == dag_id).first() is not None
 
     @classmethod
     @db.provide_session
