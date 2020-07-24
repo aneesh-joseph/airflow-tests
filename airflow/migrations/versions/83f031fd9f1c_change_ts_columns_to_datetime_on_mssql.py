@@ -28,7 +28,7 @@ from collections import defaultdict
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mssql
-from airflow.migrations.versions.utils import change_mssql_ts_column,get_table_constraints,drop_column_constraints,change_mssql_ts_column,create_constraints
+from airflow.migrations.utils import change_mssql_ts_column,get_table_constraints,drop_column_constraints,change_mssql_ts_column,create_constraints
 
 # revision identifiers, used by Alembic.
 revision = '83f031fd9f1c'

@@ -23,7 +23,7 @@ Revises: 6e96a59344a4
 Create Date: 2019-08-01 15:19:57.585620
 
 """
-from airflow.migrations.versions.utils import use_date_time,get_table_constraints
+from airflow.migrations.utils import use_date_time,get_table_constraints
 from collections import defaultdict
 from alembic import op
 from sqlalchemy.dialects import mssql
