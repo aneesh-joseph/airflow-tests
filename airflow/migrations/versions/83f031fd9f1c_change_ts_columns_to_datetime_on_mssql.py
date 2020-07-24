@@ -43,7 +43,8 @@ def is_table_empty(conn, table_name):
      :param table_name: table name
      :return: Booelan indicating if the table is present
      """
-    return conn.execute('select TOP 1 * from {table_name}'.format(table_name=table_name)).first() ==  None
+    return conn.execute('select TOP 1 * from {table_name}'.format(table_name=table_name)).first() is None
+
 
 def get_table_constraints(conn, table_name):
     """
@@ -70,7 +71,8 @@ def get_table_constraints(conn, table_name):
         constraint_dict[(constraint, constraint_type)].append(column)
     return constraint_dict
 
-def drop_column_constraints(operator,column_name, constraint_dict):
+
+def drop_column_constraints(operator, column_name, constraint_dict):
     """
     Drop a primary key or unique constraint
 
@@ -89,6 +91,7 @@ def drop_column_constraints(operator,column_name, constraint_dict):
                     constraint[0],
                     type_='unique'
                 )
+
 
 def create_constraints(operator, column_name, constraint_dict):
     """
@@ -119,28 +122,30 @@ def use_date_time(conn):
     mssql_version = result[0]
     return mssql_version in ("2000", "2005")
 
-def is_timestamp(conn,table_name,column_name):
+
+def is_timestamp(conn, table_name, column_name):
     query = """SELECT
     TYPE_NAME(C.USER_TYPE_ID) AS DATA_TYPE
     FROM SYS.COLUMNS C
     JOIN SYS.TYPES T
     ON C.USER_TYPE_ID=T.USER_TYPE_ID
     WHERE C.OBJECT_ID=OBJECT_ID('{table_name}') and C.NAME='{column_name}';
-    """.format(table_name=table_name,column_name=column_name)
+    """.format(table_name=table_name, column_name=column_name)
     column_type = conn.execute(query).fetchone()[0]
     return column_type == "timestamp"
 
-def change_mssql_ts_column(conn,op,table_name,column_name):
-    if is_timestamp(conn,table_name, column_name) and is_table_empty(conn,table_name):
+
+def change_mssql_ts_column(conn, op, table_name, column_name):
+    if is_timestamp(conn, table_name, column_name) and is_table_empty(conn, table_name):
         with op.batch_alter_table(table_name) as batch_op:
             constraint_dict = get_table_constraints(conn, table_name)
-            drop_column_constraints(batch_op,column_name,constraint_dict)
+            drop_column_constraints(batch_op, column_name, constraint_dict)
             batch_op.drop_column(column_name=column_name)
             if use_date_time(conn):
-                 batch_op.add_column(sa.Column(column_name,mssql.DATETIME, nullable=False))
+                batch_op.add_column(sa.Column(column_name, mssql.DATETIME, nullable=False))
             else:
-                batch_op.add_column(sa.Column(column_name,mssql.DATETIME2(precision=6), nullable=False))
-            create_constraints(batch_op,column_name,constraint_dict)
+                batch_op.add_column(sa.Column(column_name, mssql.DATETIME2(precision=6), nullable=False))
+            create_constraints(batch_op, column_name, constraint_dict)
 
 
 def upgrade():
@@ -149,8 +154,8 @@ def upgrade():
     """
     conn = op.get_bind()
     if conn.dialect.name == "mssql":
-        change_mssql_ts_column(conn,op,"dag_code", "last_updated")
-        change_mssql_ts_column(conn,op,"rendered_task_instance_fields", "execution_date")
+        change_mssql_ts_column(conn, op, "dag_code", "last_updated")
+        change_mssql_ts_column(conn, op, "rendered_task_instance_fields", "execution_date")
 
 
 def downgrade():
