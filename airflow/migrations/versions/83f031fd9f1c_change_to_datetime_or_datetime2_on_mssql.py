@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""change ts columns to datetime on mssql
+"""change ts/datetime columns to datetime/datetime2 on mssql
 
 Revision ID: 83f031fd9f1c
 Revises: a66efa278eea
@@ -43,7 +43,8 @@ def is_table_empty(conn, table_name):
      :param table_name: table name
      :return: Booelan indicating if the table is present
      """
-    return conn.execute('select TOP 1 * from {table_name}'.format(table_name=table_name)).first() ==  None
+    return conn.execute('select TOP 1 * from {table_name}'.format(table_name=table_name)).first() is None
+
 
 def get_table_constraints(conn, table_name):
     """
@@ -70,7 +71,8 @@ def get_table_constraints(conn, table_name):
         constraint_dict[(constraint, constraint_type)].append(column)
     return constraint_dict
 
-def drop_column_constraints(operator,column_name, constraint_dict):
+
+def drop_column_constraints(operator, column_name, constraint_dict):
     """
     Drop a primary key or unique constraint
 
@@ -89,6 +91,7 @@ def drop_column_constraints(operator,column_name, constraint_dict):
                     constraint[0],
                     type_='unique'
                 )
+
 
 def create_constraints(operator, column_name, constraint_dict):
     """
@@ -111,47 +114,87 @@ def create_constraints(operator, column_name, constraint_dict):
                 )
 
 
-def use_date_time(conn):
+def use_date_time2(conn):
     result = conn.execute(
         """SELECT CASE WHEN CONVERT(VARCHAR(128), SERVERPROPERTY ('productversion'))
         like '8%' THEN '2000' WHEN CONVERT(VARCHAR(128), SERVERPROPERTY ('productversion'))
         like '9%' THEN '2005' ELSE '2005Plus' END AS MajorVersion""").fetchone()
     mssql_version = result[0]
-    return mssql_version in ("2000", "2005")
+    return mssql_version not in ("2000", "2005")
 
-def is_timestamp(conn,table_name,column_name):
+
+def is_timestamp(conn, table_name, column_name):
     query = """SELECT
     TYPE_NAME(C.USER_TYPE_ID) AS DATA_TYPE
     FROM SYS.COLUMNS C
     JOIN SYS.TYPES T
     ON C.USER_TYPE_ID=T.USER_TYPE_ID
     WHERE C.OBJECT_ID=OBJECT_ID('{table_name}') and C.NAME='{column_name}';
-    """.format(table_name=table_name,column_name=column_name)
+    """.format(table_name=table_name, column_name=column_name)
     column_type = conn.execute(query).fetchone()[0]
     return column_type == "timestamp"
 
-def change_mssql_ts_column(conn,op,table_name,column_name):
-    if is_timestamp(conn,table_name, column_name) and is_table_empty(conn,table_name):
+
+def recreate_mssql_ts_column(conn, op, table_name, column_name):
+    """
+    drop the timestamp column and recreate it as
+    datetime or datetime2(6)
+    """
+    if is_timestamp(conn, table_name, column_name) and is_table_empty(conn, table_name):
         with op.batch_alter_table(table_name) as batch_op:
             constraint_dict = get_table_constraints(conn, table_name)
-            drop_column_constraints(batch_op,column_name,constraint_dict)
+            drop_column_constraints(batch_op, column_name, constraint_dict)
             batch_op.drop_column(column_name=column_name)
-            if use_date_time(conn):
-                 batch_op.add_column(sa.Column(column_name,mssql.DATETIME, nullable=False))
+            if use_date_time2(conn):
+                batch_op.add_column(sa.Column(column_name, mssql.DATETIME2(precision=6), nullable=False))
             else:
-                batch_op.add_column(sa.Column(column_name,mssql.DATETIME2(precision=6), nullable=False))
-            create_constraints(batch_op,column_name,constraint_dict)
+                batch_op.add_column(sa.Column(column_name, mssql.DATETIME, nullable=False))
+            create_constraints(batch_op, column_name, constraint_dict)
+
+
+def alter_mssql_datetime_column(conn, op, table_name, column_name, nullable):
+    """
+    update the datetime column to datetime2(6)
+    """
+    if use_date_time2(conn):
+        op.alter_column(
+            table_name=table_name, column_name=column_name,
+            type_=mssql.DATETIME2(precision=6), nullable=nullable
+        )
+
+
+def alter_mssql_datetime2_column(conn, op, table_name, column_name, nullable):
+    """
+    update the datetime2(6) column to datetime
+    """
+    if use_date_time2(conn):
+        op.alter_column(
+            table_name=table_name, column_name=column_name,
+            type_=mssql.DATETIME, nullable=nullable
+        )
 
 
 def upgrade():
     """
-    Change timestamp to datetime2/datetime when using MSSQL as backend
+    Change timestamp and datetime to datetime2/datetime when using MSSQL as backend
     """
     conn = op.get_bind()
-    if conn.dialect.name == "mssql":
-        change_mssql_ts_column(conn,op,"dag_code", "last_updated")
-        change_mssql_ts_column(conn,op,"rendered_task_instance_fields", "execution_date")
+    if conn.dialect.name == 'mssql':
+        recreate_mssql_ts_column(conn, op, 'dag_code', 'last_updated')
+        recreate_mssql_ts_column(conn, op, 'rendered_task_instance_fields', 'execution_date')
+        alter_mssql_datetime_column(conn, op, 'chart', 'last_modified', False)
+        alter_mssql_datetime_column(conn, op, 'serialized_dag', 'last_updated', False)
+        alter_mssql_datetime_column(conn, op, 'known_event', 'start_date', True)
+        alter_mssql_datetime_column(conn, op, 'known_event', 'end_date', True)
 
 
 def downgrade():
-    pass
+    """
+    Change datetime2(6) columns back to datetime when using MSSQL as backend
+    """
+    conn = op.get_bind()
+    if conn.dialect.name == 'mssql':
+        alter_mssql_datetime2_column(conn, op, 'chart', 'last_modified', False)
+        alter_mssql_datetime2_column(conn, op, 'serialized_dag', 'last_updated', False)
+        alter_mssql_datetime2_column(conn, op, 'known_event', 'start_date', True)
+        alter_mssql_datetime2_column(conn, op, 'known_event', 'end_date', True)

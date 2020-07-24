@@ -421,6 +421,7 @@ devel = [
     'parameterized',
     'paramiko',
     'pre-commit',
+    'pyodbc',
     'pysftp',
     'pytest',
     'pytest-cov',
