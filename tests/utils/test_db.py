@@ -98,6 +98,9 @@ class DbTest(unittest.TestCase):
         ]
         for ignore in ignores:
             diff = [d for d in diff if not ignore(d)]
+        print("\ndiff size is %s " %len (diff))
+        for d in diff:
+            print("diff in \n%s %s\n" %(d[0],d[1]))
 
         self.assertFalse(
             diff,
