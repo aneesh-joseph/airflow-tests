@@ -535,7 +535,8 @@ function build_ci_image_on_ci() {
 # selected by Breeze flags or environment variables.
 function build_ci_image() {
     CI_CACHE_FILE_BASE=$(echo "$AIRFLOW_CI_IMAGE" | tr -s ' ' | tr ' ' '_' | tr ':' '_' | tr '/' '_')
-    CI_CACHE_FILE="~/.cache/image-cache/${CI_CACHE_FILE_BASE}.tar"
+    CI_CACHE_FILE="~/.cache/image-cache/${CI_CACHE_FILE_BASE}.tar.gz"
+    echo "################# CI Cache file is $CI_CACHE_FILE"
     if [ -f "${CI_CACHE_FILE}" ]; then
         echo "$CI_CACHE_FILE exists."
         docker load --input $CI_CACHE_FILE
@@ -588,7 +589,7 @@ Docker building ${AIRFLOW_CI_IMAGE}.
         -t "${AIRFLOW_CI_IMAGE}" \
         --target "main" \
         . -f Dockerfile.ci | tee -a "${OUTPUT_LOG}"
-    docker save "${AIRFLOW_CI_IMAGE}" > $CI_CACHE_FILE
+    verbose_docker save "${AIRFLOW_CI_IMAGE}" | gzip > $CI_CACHE_FILE
     set -u
     if [[ -n "${DEFAULT_IMAGE:=}" ]]; then
         verbose_docker tag "${AIRFLOW_CI_IMAGE}" "${DEFAULT_IMAGE}" | tee -a "${OUTPUT_LOG}"
