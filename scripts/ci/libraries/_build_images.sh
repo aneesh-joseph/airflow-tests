@@ -535,7 +535,7 @@ function build_ci_image_on_ci() {
 # selected by Breeze flags or environment variables.
 function build_ci_image() {
     mkdir -p ~/.images
-    print_info "cached files are : $(ls -ltr ~/.cache/image-cache)"
+    print_info "cached files are : $(ls -ltr ~/.images)"
     CI_CACHE_FILE="~/.images/ci.tar"
     print_info "CI Cache file is $CI_CACHE_FILE"
     if [ -f "${CI_CACHE_FILE}" ]; then
