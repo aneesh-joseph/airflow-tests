@@ -591,7 +591,9 @@ Docker building ${AIRFLOW_CI_IMAGE}.
         --target "main" \
         . -f Dockerfile.ci | tee -a "${OUTPUT_LOG}"
     set -u
-    verbose_docker save "${AIRFLOW_CI_IMAGE}" --output $CI_CACHE_FILE | tee -a "${OUTPUT_LOG}"
+    mkdir -p ~/.cache/image-cache/
+    print_info "listing cache files $(ls -ltr ~/.cache/image-cache/)"
+    verbose_docker save $AIRFLOW_CI_IMAGE --output $CI_CACHE_FILE | tee -a "${OUTPUT_LOG}"
     
     if [[ -n "${DEFAULT_IMAGE:=}" ]]; then
         verbose_docker tag "${AIRFLOW_CI_IMAGE}" "${DEFAULT_IMAGE}" | tee -a "${OUTPUT_LOG}"
