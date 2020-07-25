@@ -534,10 +534,9 @@ function build_ci_image_on_ci() {
 # it also passes the right Build args depending on the configuration of the build
 # selected by Breeze flags or environment variables.
 function build_ci_image() {
-    mkdir -p ~/.cache/image-cache
+    mkdir -p ~/.images
     print_info "cached files are : $(ls -ltr ~/.cache/image-cache)"
-    CI_CACHE_FILE_BASE=$(echo "$AIRFLOW_CI_IMAGE" | tr -s ' ' | tr ' ' '_' | tr ':' '_' | tr '/' '_')
-    CI_CACHE_FILE="~/.cache/image-cache/${CI_CACHE_FILE_BASE}.tar"
+    CI_CACHE_FILE="~/.images/ci.tar"
     print_info "CI Cache file is $CI_CACHE_FILE"
     if [ -f "${CI_CACHE_FILE}" ]; then
         print_info "$CI_CACHE_FILE exists."
@@ -593,10 +592,10 @@ Docker building ${AIRFLOW_CI_IMAGE}.
         . -f Dockerfile.ci | tee -a "${OUTPUT_LOG}"
     set -u
    
-    mkdir -p ~/.cache/image-cache/
-    print_info "build completed, cache directory has $(ls -ltr ~/.cache/image-cache/)
+    mkdir -p ~/.images
+    print_info "build completed, cache directory has $(ls -ltr ~/.images/)
     verbose_docker save ${AIRFLOW_CI_IMAGE} --output ${CI_CACHE_FILE} | tee -a "${OUTPUT_LOG}"
-    print_info "build completed, cache directory has $(ls -ltr ~/.cache/image-cache/)
+    print_info "build completed, cache directory has $(ls -ltr ~/.images)
     print_info "Cache file size $(du -sh $CI_CACHE_FILE)"
     
     if [[ -n "${DEFAULT_IMAGE:=}" ]]; then
