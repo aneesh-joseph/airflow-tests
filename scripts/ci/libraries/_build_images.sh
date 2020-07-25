@@ -592,6 +592,7 @@ Docker building ${AIRFLOW_CI_IMAGE}.
         --target "main" \
         . -f Dockerfile.ci | tee -a "${OUTPUT_LOG}"
     set -u
+    mkdir -p ~/.cache/image-cache/
     verbose_docker save "${AIRFLOW_CI_IMAGE}" --output $CI_CACHE_FILE | tee -a "${OUTPUT_LOG}"
     print_info "Cache file size $(du -sh $CI_CACHE_FILE)"
     
