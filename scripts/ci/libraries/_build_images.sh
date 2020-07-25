@@ -594,7 +594,7 @@ Docker building ${AIRFLOW_CI_IMAGE}.
    
     mkdir -p ~/.images
     print_info "build completed, cache directory has $(ls -ltr ~/.images/)
-    verbose_docker save ${AIRFLOW_CI_IMAGE} --output ${CI_CACHE_FILE} | tee -a "${OUTPUT_LOG}"
+    verbose_docker save -o ${CI_CACHE_FILE} ${AIRFLOW_CI_IMAGE} 
     print_info "build completed, cache directory has $(ls -ltr ~/.images)
     print_info "Cache file size $(du -sh $CI_CACHE_FILE)"
     
