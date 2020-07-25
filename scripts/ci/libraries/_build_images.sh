@@ -534,9 +534,10 @@ function build_ci_image_on_ci() {
 # it also passes the right Build args depending on the configuration of the build
 # selected by Breeze flags or environment variables.
 function build_ci_image() {
+    mkdir -p ~/.cache/image-cache
     CI_CACHE_FILE_BASE=$(echo "$AIRFLOW_CI_IMAGE" | tr -s ' ' | tr ' ' '_' | tr ':' '_' | tr '/' '_')
     CI_CACHE_FILE="~/.cache/image-cache/${CI_CACHE_FILE_BASE}.tar"
-    print_info "################# CI Cache file is $CI_CACHE_FILE"
+    print_info "CI Cache file is $CI_CACHE_FILE"
     if [ -f "${CI_CACHE_FILE}" ]; then
         print_info "$CI_CACHE_FILE exists."
         verbose_docker load --input $CI_CACHE_FILE | tee -a "${OUTPUT_LOG}"
