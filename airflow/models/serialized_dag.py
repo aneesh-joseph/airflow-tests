@@ -24,7 +24,8 @@ from datetime import timedelta
 from typing import Any, Optional
 
 import sqlalchemy_jsonfield
-from sqlalchemy import BigInteger, Column, Index, String, and_, exists
+from sqlalchemy import BigInteger, Column, Index, String, and_
+from sqlalchemy.sql import exists
 
 from airflow.models.base import ID_LEN, Base
 from airflow.models.dag import DAG
