@@ -26,6 +26,7 @@ from typing import Any, Optional
 import sqlalchemy_jsonfield
 from sqlalchemy import BigInteger, Column, Index, String, and_
 from sqlalchemy.sql import exists
+from sqlalchemy.sql.expression import literal
 
 from airflow.models.base import ID_LEN, Base
 from airflow.models.dag import DAG
@@ -93,10 +94,8 @@ class SerializedDagModel(Base):
         # If Yes, does nothing
         # If No or the DAG does not exists, updates / writes Serialized DAG to DB
         if min_update_interval is not None:
-            if session.query(exists().where(
-                and_(cls.dag_id == dag.dag_id,
-                     (timezone.utcnow() - timedelta(seconds=min_update_interval)) < cls.last_updated))
-            ).scalar():
+            if session.query(literal(True)).filter(session.query(cls).filter(and_(cls.dag_id == dag.dag_id,
+                     (timezone.utcnow() - timedelta(seconds=min_update_interval)) < cls.last_updated)).exists()).scalar():
                 return
 
         log.debug("Writing DAG: %s to the DB", dag.dag_id)
