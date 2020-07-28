@@ -19,7 +19,7 @@ import os
 import struct
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Column, String, UnicodeText, and_
+from sqlalchemy import BigInteger, Column, String, UnicodeText, and_, exists
 
 from airflow.exceptions import AirflowException, DagCodeNotFound
 from airflow.models import Base
