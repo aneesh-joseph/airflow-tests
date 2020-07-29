@@ -28,6 +28,7 @@ from collections import defaultdict
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mssql
+from sqlalchemy.sql import func
 
 # revision identifiers, used by Alembic.
 revision = '83f031fd9f1c'
@@ -146,9 +147,11 @@ def recreate_mssql_ts_column(conn, op, table_name, column_name):
             drop_column_constraints(batch_op, column_name, constraint_dict)
             batch_op.drop_column(column_name=column_name)
             if use_date_time2(conn):
-                batch_op.add_column(sa.Column(column_name, mssql.DATETIME2(precision=6), nullable=False))
+                batch_op.add_column(sa.Column(column_name, mssql.DATETIME2(precision=6),
+                                    server_default=func.now(), nullable=False))
             else:
-                batch_op.add_column(sa.Column(column_name, mssql.DATETIME, nullable=False))
+                batch_op.add_column(sa.Column(column_name, mssql.DATETIME,
+                                    server_default=func.now(), nullable=False))
             create_constraints(batch_op, column_name, constraint_dict)
 
 
@@ -159,13 +162,14 @@ def alter_mssql_datetime_column(conn, op, table_name, column_name, nullable):
     if use_date_time2(conn):
         op.alter_column(
             table_name=table_name, column_name=column_name,
-            type_=mssql.DATETIME2(precision=6), nullable=nullable
+            type_=mssql.DATETIME2(precision=6),
+            server_default=func.now(), nullable=nullable
         )
 
 
 def alter_mssql_datetime2_column(conn, op, table_name, column_name, nullable):
     """
-    update the datetime2(6) column to datetime
+    downgrade the datetime2(6) column to datetime
     """
     if use_date_time2(conn):
         op.alter_column(
