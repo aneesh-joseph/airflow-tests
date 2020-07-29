@@ -161,9 +161,8 @@ class DagCode(Base):
         :param session: ORM Session
         """
         fileloc_hash = cls.dag_fileloc_hash(fileloc)
-        return session.query(literal(True)).filter(
-            session.query(cls).filter(cls.fileloc_hash == fileloc_hash).exists()
-        ).scalar()
+        return session.query(literal(True)).filter(cls.fileloc_hash == fileloc_hash)\
+            .first() is not None
 
     @classmethod
     def get_code_by_fileloc(cls, fileloc):
@@ -194,7 +193,7 @@ class DagCode(Base):
     @classmethod
     @provide_session
     def _get_code_from_db(cls, fileloc, session=None):
-        dag_code = session.query(cls) \
+        dag_code = session.query(literal(True)) \
             .filter(cls.fileloc_hash == cls.dag_fileloc_hash(fileloc)) \
             .first()
         if not dag_code:
