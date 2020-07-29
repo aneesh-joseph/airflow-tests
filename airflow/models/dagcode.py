@@ -193,7 +193,7 @@ class DagCode(Base):
     @classmethod
     @provide_session
     def _get_code_from_db(cls, fileloc, session=None):
-        dag_code = session.query(literal(True)) \
+        dag_code = session.query(cls) \
             .filter(cls.fileloc_hash == cls.dag_fileloc_hash(fileloc)) \
             .first()
         if not dag_code:
