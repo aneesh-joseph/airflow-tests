@@ -94,12 +94,9 @@ class SerializedDagModel(Base):
         # If No or the DAG does not exists, updates / writes Serialized DAG to DB
         if min_update_interval is not None:
             if session.query(literal(True)).filter(
-                session.query(cls)
-                .filter(
-                    and_(cls.dag_id == dag.dag_id,
-                         (timezone.utcnow() - timedelta(seconds=min_update_interval)) < cls.last_updated)
-                ).exists()
-            ).scalar():
+                and_(cls.dag_id == dag.dag_id,
+                     (timezone.utcnow() - timedelta(seconds=min_update_interval)) < cls.last_updated)
+            ).first() is not None:
                 return
 
         log.debug("Writing DAG: %s to the DB", dag.dag_id)
@@ -181,9 +178,7 @@ class SerializedDagModel(Base):
         :param session: ORM Session
         :rtype: bool
         """
-        return session.query(literal(True)).filter(
-            session.query(cls).filter(cls.dag_id == dag_id).exists()
-        ).scalar()
+        return session.query(literal(True)).filter(cls.dag_id == dag_id).first() is not None
 
     @classmethod
     @db.provide_session
