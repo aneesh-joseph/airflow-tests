@@ -944,6 +944,7 @@ When you run Airflow Breeze, the following ports are automatically forwarded:
 * 28080 -> forwarded to Airflow webserver -> airflow:8080
 * 25433 -> forwarded to Postgres database -> postgres:5432
 * 23306 -> forwarded to MySQL database  -> mysql:3306
+* 21433 -> forwarded to MSSQL database  -> mssql:1433
 
 You can connect to these ports/databases using:
 
@@ -1483,7 +1484,7 @@ This is the current syntax for  `./breeze <./breeze>`_:
           Backend to use for tests - it determines which database is used.
           One of:
 
-                 sqlite mysql postgres
+                 sqlite mysql postgres mssql
 
           Default: sqlite
 
@@ -1496,6 +1497,11 @@ This is the current syntax for  `./breeze <./breeze>`_:
           Mysql version used. One of:
 
                  5.6 5.7
+
+  --mssql-version <MSSQL_VERSION>
+          MSSQL version used. One of:
+
+                 2017-latest 2019-latest
 
   -v, --verbose
           Show verbose information about executed commands (enabled by default for running test).
@@ -1701,7 +1707,7 @@ This is the current syntax for  `./breeze <./breeze>`_:
           Backend to use for tests - it determines which database is used.
           One of:
 
-                 sqlite mysql postgres
+                 sqlite mysql postgres mssql
 
           Default: sqlite
 
@@ -1714,6 +1720,11 @@ This is the current syntax for  `./breeze <./breeze>`_:
           Mysql version used. One of:
 
                  5.6 5.7
+
+  --mssql-version <MSSQL_VERSION>
+          MSSQL version used. One of:
+
+                 2017-latest 2019-latest
 
   ****************************************************************************************************
    Enable production image

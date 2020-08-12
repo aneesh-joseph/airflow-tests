@@ -80,6 +80,9 @@ function check_db_connection {
     elif [[ ${BACKEND} == "mysql" ]]; then
         HOSTNAME=mysql
         PORT=3306
+    elif [[ ${BACKEND} == "mssql" ]]; then
+        HOSTNAME=mssql
+        PORT=1433
     else
         return
     fi

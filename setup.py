@@ -423,6 +423,7 @@ devel = [
     'parameterized',
     'paramiko',
     'pre-commit',
+    'pyodbc',
     'pysftp',
     'pytest<6.0.0',  # FIXME: pylint complaining for pytest.mark.* on v6.0
     'pytest-cov',
