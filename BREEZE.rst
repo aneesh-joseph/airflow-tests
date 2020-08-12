@@ -193,7 +193,7 @@ In case of disk space errors on macOS, increase the disk space available for Doc
 Installation
 ============
 
-Installation is as easy as checking out Airflow repository and running Breeze command.
+Installation is easy as checking out Airflow repository and running Breeze command.
 You enter the Breeze test environment by running the ``./breeze`` script. You can run it with
 the ``help`` command to see the list of available options. See `Breeze Command-Line Interface Reference`_
 for details.
