@@ -19,20 +19,19 @@
 """change ts/datetime columns to datetime/datetime2 on mssql
 
 Revision ID: 83f031fd9f1c
-Revises: a66efa278eea
+Revises: 8d48763f6d53
 Create Date: 2020-07-23 12:22:02.197726
 
 """
 
 from collections import defaultdict
-
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 from sqlalchemy.dialects import mssql
 
 # revision identifiers, used by Alembic.
 revision = '83f031fd9f1c'
-down_revision = 'a66efa278eea'
+down_revision = '8d48763f6d53'
 branch_labels = None
 depends_on = None
 
