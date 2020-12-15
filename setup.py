@@ -503,6 +503,7 @@ devel = [
     'pipdeptree',
     'pre-commit',
     'pylint>=2.7.0',
+    'pyodbc',
     'pysftp',
     'pytest~=6.0',
     'pytest-cov',
