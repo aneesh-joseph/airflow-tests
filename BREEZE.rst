@@ -1941,7 +1941,7 @@ This is the current syntax for  `./breeze <./breeze>`_:
           Backend to use for tests - it determines which database is used.
           One of:
 
-                 sqlite mysql postgres
+                 sqlite mysql postgres mssql
 
           Default: sqlite
 
@@ -2407,7 +2407,7 @@ This is the current syntax for  `./breeze <./breeze>`_:
           Backend to use for tests - it determines which database is used.
           One of:
 
-                 sqlite mysql postgres
+                 sqlite mysql postgres mssql
 
           Default: sqlite
 
