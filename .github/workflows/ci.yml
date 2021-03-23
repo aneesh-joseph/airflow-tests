@@ -136,6 +136,7 @@ jobs:
       postgresVersions: ${{ steps.selective-checks.outputs.postgres-versions }}
       defaultPostgresVersion: ${{ steps.selective-checks.outputs.default-postgres-version }}
       mysqlVersions: ${{ steps.selective-checks.outputs.mysql-versions }}
+      mssqlVersions: ""
       defaultMySQLVersion: ${{ steps.selective-checks.outputs.default-mysql-version }}
       helmVersions: ${{ steps.selective-checks.outputs.helm-versions }}
       defaultHelmVersion: ${{ steps.selective-checks.outputs.default-helm-version }}
@@ -215,19 +216,6 @@ jobs:
             ./scripts/ci/selective_ci_checks.sh
           fi
 
-  test-openapi-client-generation:
-    name: "Test OpenAPI client generation"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info]
-    if: needs.build-info.outputs.needs-api-codegen == 'true'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-          persist-credentials: false
-      - name: "Generate client codegen diff"
-        run: ./scripts/ci/openapi/client_codegen_diff.sh
 
   ci-images:
     timeout-minutes: 120
@@ -302,495 +290,9 @@ jobs:
         run: ./scripts/ci/images/ci_verify_ci_image.sh
         if: needs.build-info.outputs.waitForImage == 'true'
 
-  static-checks:
-    timeout-minutes: 30
-    name: "Static checks"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    env:
-      SKIP: "pylint,identity"
-      MOUNT_SELECTED_LOCAL_SOURCES: "true"
-      PYTHON_MAJOR_MINOR_VERSION: ${{needs.build-info.outputs.defaultPythonVersion}}
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    if: needs.build-info.outputs.basic-checks-only == 'false'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{needs.build-info.outputs.defaultPythonVersion}}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Get Python version"
-        run: "echo \"::set-output name=host-python-version::$(python -c
- 'import platform; print(platform.python_version())')\""
-        id: host-python-version
-      - name: "Cache pre-commit local-installation"
-        uses: actions/cache@v2
-        with:
-          path: ~/.local
-          key: "pre-commit-local-installation-${{steps.host-python-version.outputs.host-python-version}}-\
-${{ hashFiles('setup.py', 'setup.cfg') }}"
-          restore-keys: "\
-pre-commit-local-installation-${{steps.host-python-version.outputs.host-python-version}}-"
-      - name: "Cache pre-commit envs: no-pylint"
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pre-commit
-          key: "pre-commit-no-pylint-${{steps.host-python-version.outputs.host-python-version}}-\
-${{ hashFiles('.pre-commit-config.yaml') }}"
-          restore-keys: pre-commit-no-pylint-${{steps.host-python-version.outputs.host-python-version}}
-      - name: "Static checks: except pylint"
-        run: ./scripts/ci/static_checks/run_static_checks.sh
-        env:
-          VERBOSE: false
-
-  # Those checks are run if no image needs to be built for checks. This is for simple changes that
-  # Do not touch any of the python code or any of the important files that might require building
-  # The CI Docker image and they can be run entirely using the pre-commit virtual environments on host
-  static-checks-basic-checks-only:
-    timeout-minutes: 30
-    name: "Static checks: basic checks only"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info]
-    env:
-      SKIP: "build,mypy,flake8,pylint,bats-in-container-tests,identity"
-      MOUNT_SELECTED_LOCAL_SOURCES: "true"
-      PYTHON_MAJOR_MINOR_VERSION: ${{needs.build-info.outputs.defaultPythonVersion}}
-    if: needs.build-info.outputs.basic-checks-only == 'true'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{needs.build-info.outputs.defaultPythonVersion}}
-      - name: >
-          Fetch incoming commit ${{ github.sha }} with its parent
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 2
-          persist-credentials: false
-      - name: "Get Python version"
-        run: "echo \"::set-output name=host-python-version::$(python -c
- 'import platform; print(platform.python_version())')\""
-        id: host-python-version
-      - name: "Cache pre-commit local-installation"
-        uses: actions/cache@v2
-        with:
-          path: ~/.local
-          key: "pre-commit-local-installation-${{steps.host-python-version.outputs.host-python-version}}-\
-${{ hashFiles('setup.py', 'setup.cfg') }}"
-          restore-keys: "\
-pre-commit-local-installation-${{steps.host-python-version.outputs.host-python-version}}-"
-      - name: "Cache pre-commit envs: no-pylint"
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pre-commit
-          key: "pre-commit-no-pylint-${{steps.host-python-version.outputs.host-python-version}}-\
-${{ hashFiles('.pre-commit-config.yaml') }}"
-          restore-keys: pre-commit-no-pylint-${{steps.host-python-version.outputs.host-python-version}}
-      - name: "Static checks: basic checks only"
-        run: ./scripts/ci/static_checks/run_basic_static_checks.sh "${{ github.sha }}"
-        env:
-          VERBOSE: false
 
 
-  static-checks-pylint:
-    timeout-minutes: 30
-    name: "Pylint"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    if: needs.build-info.outputs.basic-checks-only == 'false'
-    env:
-      # We want to make sure we have latest sources as only in_container scripts are added
-      # to the image but we want to static-check all of them
-      MOUNT_SELECTED_LOCAL_SOURCES: "true"
-      PYTHON_MAJOR_MINOR_VERSION: ${{needs.build-info.outputs.defaultPythonVersion}}
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{needs.build-info.outputs.defaultPythonVersion}}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Get Python version"
-        run: "echo \"::set-output name=host-python-version::$(python -c
- 'import platform; print(platform.python_version())')\""
-        id: host-python-version
-      - name: "Cache pre-commit local-installation"
-        uses: actions/cache@v2
-        with:
-          path: ~/.local
-          key: "pre-commit-local-installation-${{steps.host-python-version.outputs.host-python-version}}-\
-${{ hashFiles('setup.py', 'setup.cfg') }}"
-          restore-keys: "\
-pre-commit-local-installation-${{steps.host-python-version.outputs.host-python-version}}-"
-      - name: "Cache pre-commit envs - pylint"
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pre-commit
-          key: "pre-commit-pylint-${{steps.host-python-version.outputs.host-python-version}}-\
-${{ hashFiles('.pre-commit-config.yaml') }}"
-          restore-keys: pre-commit-pylint-${{steps.host-python-version.outputs.host-python-version}}
-      - name: "Static checks: pylint"
-        run: ./scripts/ci/static_checks/run_static_checks.sh pylint
-        env:
-          VERBOSE: false
 
-  docs:
-    timeout-minutes: 45
-    name: "Build docs"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    if: needs.build-info.outputs.docs-build == 'true'
-    env:
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-          submodules: recursive
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Build docs"
-        run: ./scripts/ci/docs/ci_docs.sh
-      - name: Configure AWS credentials
-        uses: ./.github/actions/configure-aws-credentials
-        if: >
-          github.ref == 'refs/heads/master' && github.repository == 'apache/airflow' &&
-          github.event_name == 'push'
-        with:
-          aws-access-key-id: ${{ secrets.DOCS_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.DOCS_AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
-      - name: "Upload documentation to AWS S3"
-        if: >
-          github.ref == 'refs/heads/master' && github.repository == 'apache/airflow' &&
-          github.event_name == 'push'
-        run: aws s3 sync --delete ./files/documentation s3://apache-airflow-docs
-
-  prepare-provider-packages:
-    timeout-minutes: 40
-    name: "Provider packages ${{ matrix.package-format }}"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    env:
-      INSTALL_AIRFLOW_VERSION: "${{ matrix.package-format }}"
-      AIRFLOW_EXTRAS: "all"
-      PYTHON_MAJOR_MINOR_VERSION: ${{needs.build-info.outputs.defaultPythonVersion}}
-      VERSION_SUFFIX_FOR_PYPI: "dev"
-      VERSION_SUFFIX_FOR_SVN: "dev"
-      PACKAGE_FORMAT: ${{ matrix.package-format }}
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    strategy:
-      matrix:
-        package-format: ['wheel', 'sdist']
-    if: needs.build-info.outputs.image-build == 'true'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Prepare provider documentation"
-        run: ./scripts/ci/provider_packages/ci_prepare_provider_documentation.sh
-      - name: "Prepare provider packages: ${{ matrix.package-format }}"
-        run: ./scripts/ci/provider_packages/ci_prepare_provider_packages.sh
-      - name: "Prepare airflow packages: ${{ matrix.package-format }}"
-        run: ./scripts/ci/build_airflow/ci_build_airflow_package.sh
-      - name: "Install and test provider packages and airflow via ${{ matrix.package-format }} files"
-        run: ./scripts/ci/provider_packages/ci_install_and_test_provider_packages.sh
-      - name: "Upload package artifacts"
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: airflow-provider-packages
-          path: "./dist/apache-*"
-          retention-days: 7
-
-  test-provider-packages-released-airflow:
-    timeout-minutes: 30
-    name: "Test Provider packages with 2.0.0 version ${{ matrix.package-format }}"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    env:
-      INSTALL_AIRFLOW_VERSION: "2.0.0"
-      AIRFLOW_EXTRAS: "all"
-      PYTHON_MAJOR_MINOR_VERSION: ${{needs.build-info.outputs.defaultPythonVersion}}
-      VERSION_SUFFIX_FOR_PYPI: "dev"
-      VERSION_SUFFIX_FOR_SVN: "dev"
-      PACKAGE_FORMAT: ${{ matrix.package-format }}
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    strategy:
-      matrix:
-        package-format: ['wheel', 'sdist']
-    if: needs.build-info.outputs.image-build == 'true'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Prepare provider documentation"
-        run: ./scripts/ci/provider_packages/ci_prepare_provider_documentation.sh
-      - name: "Prepare provider packages: ${{ matrix.package-format }}"
-        run: ./scripts/ci/provider_packages/ci_prepare_provider_packages.sh
-      - name: "Install and test provider packages and airflow via ${{ matrix.package-format }} files"
-        run: ./scripts/ci/provider_packages/ci_install_and_test_provider_packages.sh
-
-  tests-helm:
-    timeout-minutes: 20
-    name: "Python unit tests for helm chart"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    env:
-      MOUNT_SELECTED_LOCAL_SOURCES: "true"
-      RUN_TESTS: true
-      TEST_TYPES: "Helm"
-      BACKEND: "sqlite"
-      PYTHON_MAJOR_MINOR_VERSION: ${{needs.build-info.outputs.defaultPythonVersion}}
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    if: >
-      needs.build-info.outputs.needs-helm-tests == 'true' &&
-      (github.repository == 'apache/airflow' || github.event_name != 'schedule')
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Tests: ${{needs.build-info.outputs.testTypes}}"
-        run: ./scripts/ci/testing/ci_run_airflow_testing.sh
-      - name: "Upload airflow logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: airflow-logs-helm
-          path: "./files/airflow_logs*"
-          retention-days: 7
-      - name: "Upload container logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: container-logs-helm
-          path: "./files/container_logs*"
-          retention-days: 7
-      - name: "Upload artifact for coverage"
-        uses: actions/upload-artifact@v2
-        with:
-          name: >
-            coverage-helm
-          path: "./files/coverage.xml"
-          retention-days: 7
-
-  tests-postgres:
-    timeout-minutes: 130
-    name: >
-      Postgres${{matrix.postgres-version}},Py${{matrix.python-version}}:
-      ${{needs.build-info.outputs.testTypes}}
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    strategy:
-      matrix:
-        python-version: ${{ fromJson(needs.build-info.outputs.pythonVersions) }}
-        postgres-version: ${{ fromJson(needs.build-info.outputs.postgresVersions) }}
-        exclude: ${{ fromJson(needs.build-info.outputs.postgresExclude) }}
-      fail-fast: false
-    env:
-      BACKEND: postgres
-      PYTHON_MAJOR_MINOR_VERSION: ${{ matrix.python-version }}
-      POSTGRES_VERSION: ${{ matrix.postgres-version }}
-      RUN_TESTS: true
-      TEST_TYPES: "${{needs.build-info.outputs.testTypes}}"
-      TEST_TYPE: ""
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    if: needs.build-info.outputs.run-tests == 'true'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Tests: ${{needs.build-info.outputs.testTypes}}"
-        run: ./scripts/ci/testing/ci_run_airflow_testing.sh
-      - name: "Upload airflow logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: airflow-logs-${{matrix.python-version}}-${{matrix.postgres-version}}
-          path: "./files/airflow_logs*"
-          retention-days: 7
-      - name: "Upload container logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: container-logs-postgres-${{matrix.python-version}}-${{matrix.postgres-version}}
-          path: "./files/container_logs*"
-          retention-days: 7
-      - name: "Upload artifact for coverage"
-        uses: actions/upload-artifact@v2
-        with:
-          name: >
-            coverage-postgres-${{matrix.python-version}}-${{matrix.postgres-version}}
-          path: "./files/coverage.xml"
-          retention-days: 7
-
-  tests-mysql:
-    timeout-minutes: 130
-    name: >
-      MySQL${{matrix.mysql-version}}, Py${{matrix.python-version}}: ${{needs.build-info.outputs.testTypes}}
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    strategy:
-      matrix:
-        python-version: ${{ fromJson(needs.build-info.outputs.pythonVersions) }}
-        mysql-version: ${{ fromJson(needs.build-info.outputs.mysqlVersions) }}
-        exclude: ${{ fromJson(needs.build-info.outputs.mysqlExclude) }}
-      fail-fast: false
-    env:
-      BACKEND: mysql
-      PYTHON_MAJOR_MINOR_VERSION: ${{ matrix.python-version }}
-      MYSQL_VERSION: ${{ matrix.mysql-version }}
-      RUN_TESTS: true
-      TEST_TYPES: "${{needs.build-info.outputs.testTypes}}"
-      TEST_TYPE: ""
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    if: needs.build-info.outputs.run-tests == 'true'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Tests: ${{needs.build-info.outputs.testTypes}}"
-        run: ./scripts/ci/testing/ci_run_airflow_testing.sh
-      - name: "Upload airflow logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: airflow-logs-${{matrix.python-version}}-${{matrix.mysql-version}}
-          path: "./files/airflow_logs*"
-          retention-days: 7
-      - name: "Upload container logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: container-logs-mysql-${{matrix.python-version}}-${{matrix.mysql-version}}
-          path: "./files/container_logs*"
-          retention-days: 7
-      - name: "Upload artifact for coverage"
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-mysql-${{matrix.python-version}}-${{matrix.mysql-version}}
-          path: "./files/coverage.xml"
-          retention-days: 7
-
-  tests-sqlite:
-    timeout-minutes: 130
-    name: >
-      Sqlite Py${{matrix.python-version}}: ${{needs.build-info.outputs.testTypes}}
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    needs: [build-info, ci-images]
-    strategy:
-      matrix:
-        python-version: ${{ fromJson(needs.build-info.outputs.pythonVersions) }}
-        exclude: ${{ fromJson(needs.build-info.outputs.sqliteExclude) }}
-      fail-fast: false
-    env:
-      BACKEND: sqlite
-      PYTHON_MAJOR_MINOR_VERSION: ${{ matrix.python-version }}
-      RUN_TESTS: true
-      TEST_TYPES: "${{needs.build-info.outputs.testTypes}}"
-      TEST_TYPE: ""
-      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
-    if: needs.build-info.outputs.run-tests == 'true'
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: "Setup python"
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
-      - name: "Free space"
-        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
-      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
-        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
-      - name: "Tests: ${{needs.build-info.outputs.testTypes}}"
-        run: ./scripts/ci/testing/ci_run_airflow_testing.sh
-      - name: "Upload airflow logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: airflow-logs-${{matrix.python-version}}
-          path: './files/airflow_logs*'
-          retention-days: 7
-      - name: "Upload container logs"
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: container-logs-sqlite-${{matrix.python-version}}
-          path: "./files/container_logs*"
-          retention-days: 7
-      - name: "Upload artifact for coverage"
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-sqlite-${{matrix.python-version}}
-          path: ./files/coverage.xml
-          retention-days: 7
 
   tests-quarantined:
     timeout-minutes: 60
@@ -801,9 +303,7 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
     strategy:
       matrix:
         include:
-          - backend: mysql
-          - backend: postgres
-          - backend: sqlite
+          - backend: mssql
     env:
       BACKEND: ${{ matrix.backend }}
       PYTHON_MAJOR_MINOR_VERSION: ${{ needs.build-info.outputs.defaultPythonVersion }}
@@ -870,35 +370,6 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
           name: coverage-quarantined-${{ matrix.backend }}
           path: "./files/coverage.xml"
           retention-days: 7
-
-  upload-coverage:
-    timeout-minutes: 15
-    name: "Upload coverage"
-    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
-    continue-on-error: true
-    needs:
-      - build-info
-      - tests-kubernetes
-      - tests-postgres
-      - tests-sqlite
-      - tests-mysql
-      - tests-quarantined
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-          submodules: recursive
-      - name: "Download all artifacts from the current build"
-        uses: actions/download-artifact@v2
-        with:
-          path: ./coverage-files
-      - name: "Removes unnecessary artifacts"
-        run: ls ./coverage-files | grep -v coverage | xargs rm -rf
-      - name: "Upload all coverage reports to codecov"
-        uses: ./.github/actions/codecov-action
-        with:
-          directory: "./coverage-files"
 
   prod-images:
     timeout-minutes: 120
@@ -969,6 +440,63 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
         run: ./scripts/ci/images/ci_verify_prod_image.sh
         if: needs.build-info.outputs.waitForImage == 'true'
 
+  tests-mssql:
+    timeout-minutes: 130
+    name: >
+      MSSQL${{matrix.mssql-version}},Py${{matrix.python-version}}:
+      ${{needs.build-info.outputs.testTypes}}
+    runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
+    needs: [build-info, ci-images]
+    strategy:
+      matrix:
+        python-version: ${{ fromJson(needs.build-info.outputs.pythonVersions) }}
+        mssql-version: ["2017-latest","2019-latest"]
+      fail-fast: false
+    env:
+      BACKEND: mssql
+      PYTHON_MAJOR_MINOR_VERSION: ${{ matrix.python-version }}
+      POSTGRES_VERSION: ${{ matrix.postgres-version }}
+      RUN_TESTS: true
+      TEST_TYPES: "${{needs.build-info.outputs.testTypes}}"
+      TEST_TYPE: ""
+      GITHUB_REGISTRY: ${{ needs.ci-images.outputs.githubRegistry }}
+    if: needs.build-info.outputs.run-tests == 'true'
+    steps:
+      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      - name: "Setup python"
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
+      - name: "Free space"
+        run: ./scripts/ci/tools/ci_free_space_on_ci.sh
+      - name: "Prepare CI image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
+        run: ./scripts/ci/images/ci_prepare_ci_image_on_ci.sh
+      - name: "Tests: ${{needs.build-info.outputs.testTypes}}"
+        run: ./scripts/ci/testing/ci_run_airflow_testing.sh
+      - name: "Upload airflow logs"
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: airflow-logs-${{matrix.python-version}}-${{matrix.postgres-version}}
+          path: "./files/airflow_logs*"
+          retention-days: 7
+      - name: "Upload container logs"
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: container-logs-postgres-${{matrix.python-version}}-${{matrix.postgres-version}}
+          path: "./files/container_logs*"
+          retention-days: 7
+      - name: "Upload artifact for coverage"
+        uses: actions/upload-artifact@v2
+        with:
+          name: >
+            coverage-postgres-${{matrix.python-version}}-${{matrix.postgres-version}}
+          path: "./files/coverage.xml"
+          retention-days: 7
   tests-kubernetes:
     timeout-minutes: 50
     name: K8s ${{matrix.python-version}} ${{matrix.kubernetes-version}} ${{matrix.kubernetes-mode}}
@@ -982,7 +510,7 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
         exclude: ${{ fromJson(needs.build-info.outputs.kubernetesExclude) }}
       fail-fast: false
     env:
-      BACKEND: postgres
+      BACKEND: mssql
       RUN_TESTS: "true"
       RUNTIME: "kubernetes"
       PYTHON_MAJOR_MINOR_VERSION: "${{ matrix.python-version }}"
@@ -1050,17 +578,9 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
     runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
     needs:
       - build-info
-      - static-checks
-      - static-checks-pylint
-      - tests-sqlite
-      - tests-postgres
-      - tests-mysql
       - tests-kubernetes
-      - prepare-provider-packages
-      - test-provider-packages-released-airflow
       - prod-images
       - verify-prod-images
-      - docs
     if: >
       (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/v1-10-test' ||
       github.ref == 'refs/heads/v2-0-test') &&
@@ -1099,15 +619,9 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
     runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
     needs:
       - build-info
-      - static-checks
-      - static-checks-pylint
-      - tests-sqlite
-      - tests-postgres
-      - tests-mysql
       - tests-kubernetes
       - ci-images
       - verify-ci-images
-      - docs
     if: >
       (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/v1-10-test' ||
       github.ref == 'refs/heads/v2-0-test') &&
@@ -1194,11 +708,6 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
       - constraints
       - verify-ci-images
       - verify-prod-images
-      - static-checks
-      - static-checks-pylint
-      - tests-sqlite
-      - tests-mysql
-      - tests-postgres
       - tests-kubernetes
     # Only run it for direct pushes
     if: >
@@ -1237,15 +746,8 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
     name: "Tag repo nightly"
     runs-on: ${{ fromJson(needs.build-info.outputs.runsOn) }}
     needs:
-      - docs
-      - static-checks
-      - static-checks-pylint
-      - tests-sqlite
-      - tests-postgres
-      - tests-mysql
       - tests-kubernetes
       - constraints-push
-      - prepare-provider-packages
     if: github.event_name == 'schedule' &&  github.repository == 'apache/airflow'
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
