@@ -578,7 +578,6 @@ jobs:
       - build-info
       - tests-kubernetes
       - prod-images
-      - verify-prod-images
     if: >
       (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/v1-10-test' ||
       github.ref == 'refs/heads/v2-0-test') &&
@@ -708,7 +707,6 @@ jobs:
       - build-info
       - constraints
       - verify-ci-images
-      - verify-prod-images
       - tests-kubernetes
     # Only run it for direct pushes
     if: >
