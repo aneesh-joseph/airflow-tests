@@ -347,9 +347,11 @@ class AirflowSecurityManager(SecurityManager, LoggingMixin):  # pylint: disable=
         if not user:
             user = g.user
         prefixed_dag_id = self.prefixed_dag_id(dag_id)
-        return self._has_view_access(
-            user, permissions.ACTION_CAN_READ, permissions.RESOURCE_DAG
-        ) or self._has_view_access(user, permissions.ACTION_CAN_READ, prefixed_dag_id)
+        return (
+            self._has_view_access(user, permissions.ACTION_CAN_READ, permissions.RESOURCE_DAG)
+            or self._has_view_access(user, permissions.ACTION_CAN_READ, prefixed_dag_id)
+            or False
+        )
 
     def can_edit_dag(self, dag_id, user=None) -> bool:
         """Determines whether a user has DAG edit access."""
@@ -357,9 +359,11 @@ class AirflowSecurityManager(SecurityManager, LoggingMixin):  # pylint: disable=
             user = g.user
         prefixed_dag_id = self.prefixed_dag_id(dag_id)
 
-        return self._has_view_access(
-            user, permissions.ACTION_CAN_EDIT, permissions.RESOURCE_DAG
-        ) or self._has_view_access(user, permissions.ACTION_CAN_EDIT, prefixed_dag_id)
+        return (
+            self._has_view_access(user, permissions.ACTION_CAN_EDIT, permissions.RESOURCE_DAG)
+            or self._has_view_access(user, permissions.ACTION_CAN_EDIT, prefixed_dag_id)
+            or False
+        )
 
     def prefixed_dag_id(self, dag_id):
         """Returns the permission name for a DAG id."""
@@ -396,7 +400,7 @@ class AirflowSecurityManager(SecurityManager, LoggingMixin):  # pylint: disable=
         if user.is_anonymous:
             user.roles = self.get_user_roles(user)
 
-        has_access = self._has_view_access(user, permission, resource)
+        has_access = self._has_view_access(user, permission, resource) or False
         # FAB built-in view access method. Won't work for AllDag access.
 
         if self.is_dag_resource(resource):
