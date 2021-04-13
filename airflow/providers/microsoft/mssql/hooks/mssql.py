@@ -37,12 +37,12 @@ class MsSqlHook(DbApiHook):
 
     def get_conn(
         self,
-    ) -> pymssql.connect:  # pylint: disable=protected-access  # pylint: disable=c-extension-no-member
+    ) -> pymssql.connect:  # pylint: disable=protected-access,c-extension-no-member,no-member
         """Returns a mssql connection object"""
         conn = self.get_connection(
             self.mssql_conn_id  # type: ignore[attr-defined]  # pylint: disable=no-member
         )
-        # pylint: disable=c-extension-no-member
+        # pylint: disable=c-extension-no-member,no-member
         conn = pymssql.connect(
             server=conn.host,
             user=conn.login,
@@ -54,10 +54,10 @@ class MsSqlHook(DbApiHook):
 
     def set_autocommit(
         self,
-        conn: pymssql.connect,  # pylint: disable=c-extension-no-member
+        conn: pymssql.connect,  # pylint: disable=c-extension-no-member,no-member
         autocommit: bool,
     ) -> None:
         conn.autocommit(autocommit)
 
-    def get_autocommit(self, conn: pymssql.connect):  # pylint: disable=c-extension-no-member
+    def get_autocommit(self, conn: pymssql.connect):  # pylint: disable=c-extension-no-member,no-member
         return conn.autocommit_state
