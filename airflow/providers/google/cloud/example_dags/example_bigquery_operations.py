@@ -47,7 +47,7 @@ DATASET_NAME = os.environ.get("GCP_BIGQUERY_DATASET_NAME", "test_dataset_operati
 LOCATION_DATASET_NAME = f"{DATASET_NAME}_location"
 DATA_SAMPLE_GCS_URL = os.environ.get(
     "GCP_BIGQUERY_DATA_GCS_URL",
-    "gs://cloud-samples-data/bigquery/us-states/us-states.csv",
+    "gs://INVALID BUCKET NAME/bigquery/us-states/us-states.csv",
 )
 
 DATA_SAMPLE_GCS_URL_PARTS = urlparse(DATA_SAMPLE_GCS_URL)
@@ -205,10 +205,21 @@ with models.DAG(
 
     create_dataset >> patch_dataset >> update_dataset >> get_dataset >> get_dataset_result >> delete_dataset
 
-    update_dataset >> create_table >> create_view >> create_materialized_view >> update_table >> [
-        get_dataset_tables,
-        delete_view,
-    ] >> upsert_table >> delete_materialized_view >> delete_table >> delete_dataset
+    (
+        update_dataset
+        >> create_table
+        >> create_view
+        >> create_materialized_view
+        >> update_table
+        >> [
+            get_dataset_tables,
+            delete_view,
+        ]
+        >> upsert_table
+        >> delete_materialized_view
+        >> delete_table
+        >> delete_dataset
+    )
     update_dataset >> create_external_table >> delete_dataset
 
 with models.DAG(

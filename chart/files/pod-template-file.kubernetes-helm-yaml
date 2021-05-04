@@ -70,6 +70,7 @@ spec:
         - mountPath: {{ include "airflow_dags" . }}
           name: dags
           readOnly: true
+          subPath: {{.Values.dags.gitSync.dest }}/{{ .Values.dags.gitSync.subPath }}
 {{- end }}
 {{- if .Values.workers.extraVolumeMounts }}
 {{ toYaml .Values.workers.extraVolumeMounts | indent 8 }}
@@ -86,7 +87,7 @@ spec:
   nodeSelector: {{ toYaml .Values.nodeSelector | nindent 4 }}
   affinity: {{ toYaml .Values.affinity | nindent 4 }}
   tolerations: {{ toYaml .Values.tolerations | nindent 4 }}
-  serviceAccountName: '{{ .Release.Name }}-worker'
+  serviceAccountName: {{ include "worker.serviceAccountName" . }}
   volumes:
   {{- if .Values.dags.persistence.enabled }}
   - name: dags

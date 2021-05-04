@@ -122,7 +122,7 @@ jobs:
             "xinbinhuang",
             "yuqian",
             "eladkal"
-          ]'), github.actor)
+          ]'), github.event.pull_request.user.login)
         ) && github.repository == 'apache/airflow'
       ) && 'self-hosted' || 'ubuntu-20.04' }}
     env:
@@ -553,12 +553,12 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
       - name: "Install and test provider packages and airflow via wheel files"
         run: ./scripts/ci/provider_packages/ci_install_and_test_provider_packages.sh
         env:
-          INSTALL_AIRFLOW_VERSION: "wheel"
+          USE_AIRFLOW_VERSION: "wheel"
           PACKAGE_FORMAT: "wheel"
       - name: "Install and test provider packages and airflow on Airflow 2.0 files"
         run: ./scripts/ci/provider_packages/ci_install_and_test_provider_packages.sh
         env:
-          INSTALL_AIRFLOW_VERSION: "2.0.0"
+          USE_AIRFLOW_VERSION: "2.0.0"
           PACKAGE_FORMAT: "wheel"
 
   prepare-test-provider-packages-sdist:
@@ -599,7 +599,7 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
       - name: "Install and test provider packages and airflow via sdist files"
         run: ./scripts/ci/provider_packages/ci_install_and_test_provider_packages.sh
         env:
-          INSTALL_AIRFLOW_VERSION: "sdist"
+          USE_AIRFLOW_VERSION: "sdist"
           PACKAGE_FORMAT: "sdist"
 
   tests-helm:
@@ -1132,6 +1132,16 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
           python-version: ${{ env.PYTHON_MAJOR_MINOR_VERSION }}
       - name: "Free space"
         run: ./scripts/ci/tools/ci_free_space_on_ci.sh
+      - name: Set push-python-image
+        id: push-python-image
+        run: |
+          if [[ "${REF}" == 'refs/head/master' || "${REF}" == 'refs/head/main' ]]; then
+              echo "::set-output name=wanted::true"
+          else
+              echo "::set-output name=wanted::false"
+          fi
+        env:
+          REF: ${{ github.ref }}
       - name:
           "Prepare PROD image ${{env.PYTHON_MAJOR_MINOR_VERSION}}:${{ env.GITHUB_REGISTRY_PULL_IMAGE_TAG }}"
         run: ./scripts/ci/images/ci_prepare_prod_image_on_ci.sh
@@ -1139,8 +1149,11 @@ ${{ hashFiles('.pre-commit-config.yaml') }}"
           # Since we are going to push both final image and build image segment, we need to pull the
           # build image, in case we are pulling from registry rather than building.
           WAIT_FOR_PROD_BUILD_IMAGE: "true"
+          WAIT_FOR_PYTHON_BASE_IMAGE: ${{ steps.push-python-image.outputs.wanted}}
       - name: "Push PROD images ${{ matrix.python-version }}:${{ env.GITHUB_REGISTRY_PUSH_IMAGE_TAG }}"
         run: ./scripts/ci/images/ci_push_production_images.sh
+        env:
+          PUSH_PYTHON_BASE_IMAGE: ${{ steps.push-python-image.outputs.wanted}}
 
   push-ci-images-to-github-registry:
     timeout-minutes: 10

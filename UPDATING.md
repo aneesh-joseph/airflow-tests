@@ -27,6 +27,7 @@ assists users migrating to a new version.
 **Table of contents**
 
 - [Master](#master)
+- [Airflow 2.0.2](#airflow-202)
 - [Airflow 2.0.1](#airflow-201)
 - [Airflow 2.0.0](#airflow-200)
 - [Airflow 1.10.15](#airflow-11015)
@@ -70,6 +71,14 @@ https://developers.google.com/style/inclusive-documentation
 
 -->
 
+### Deprecated PodDefaults and add_xcom_sidecar in airflow.kubernetes.pod_generator
+
+We have moved PodDefaults from `airflow.kubernetes.pod_generator.PodDefaults` to
+`airflow.providers.cncf.kubernetes.utils.xcom_sidecar.PodDefaults` and moved add_xcom_sidecar
+from `airflow.kubernetes.pod_generator.PodGenerator.add_xcom_sidecar`to
+`airflow.providers.cncf.kubernetes.utils.xcom_sidecar.add_xcom_sidecar`.
+This change will allow us to modify the KubernetesPodOperator XCom functionality without requiring airflow upgrades.
+
 ### Removed pod_launcher from core airflow
 
 Moved the pod launcher from `airflow.kubernetes.pod_launcher` to `airflow.providers.cncf.kubernetes.utils.pod_launcher`
@@ -91,9 +100,17 @@ serve as a DagBag cache burst time.
 
 The `default_queue` configuration option has been moved from `[celery]` section to `[operators]` section to allow for re-use between different executors.
 
+## Airflow 2.0.2
+
 ### Default `[kubernetes] enable_tcp_keepalive` is changed to `True`
 
 This allows Airflow to work more reliably with some environments (like Azure) by default.
+
+### `sync-perm` CLI no longer syncs DAG specific permissions by default
+
+The `sync-perm` CLI command will no longer sync DAG specific permissions by default as they are now being handled during
+DAG parsing. If you need or want the old behavior, you can pass `--include-dags` to have `sync-perm` also sync DAG
+specific permissions.
 
 ## Airflow 2.0.1
 
@@ -1777,13 +1794,6 @@ you should use `pip install apache-airflow[apache.atlas]`.
 
 
 NOTE!
-
-On November 2020, new version of PIP (20.3) has been released with a new, 2020 resolver. This resolver
-does not yet work with Apache Airflow and might lead to errors in installation - depends on your choice
-of extras. In order to install Airflow you need to either downgrade pip to version 20.2.4
-`pip install --upgrade pip==20.2.4` or, in case you use Pip 20.3, you need to add option
-`--use-deprecated legacy-resolver` to your pip install command.
-
 
 If you want to install integration for Microsoft Azure, then instead of
 
