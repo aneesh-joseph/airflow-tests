@@ -2080,8 +2080,8 @@ class TestRunRawTaskQueriesCount(unittest.TestCase):
     @parameterized.expand(
         [
             # Expected queries, mark_success
-            (10, False),
-            (5, True),
+            (12, False),
+            (7, True),
         ]
     )
     def test_execute_queries_count(self, expected_query_count, mark_success):
@@ -2125,7 +2125,7 @@ class TestRunRawTaskQueriesCount(unittest.TestCase):
             )
         # an extra query is fired in RenderedTaskInstanceFields.delete_old_records
         # for other DBs
-        expected_query_count_based_on_db = 11 if session.bind.dialect.name == "mssql" else 10
+        expected_query_count_based_on_db = 13 if session.bind.dialect.name == "mssql" else 12
 
         with assert_queries_count(expected_query_count_based_on_db):
             ti._run_raw_task()
